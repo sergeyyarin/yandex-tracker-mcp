@@ -3,7 +3,7 @@
   "name": "yandex-tracker-mcp",
   "display_name": "Yandex Tracker MCP",
   "version": "1.1.1",
-  "description": "Yandex Tracker MCP Server",
+  "description": "Controlled task management for Yandex Tracker",
   "author": {
     "name": "KTS",
     "email": "hello@kts.tech",
@@ -235,6 +235,6 @@
   "license": "Apache 2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aikts/yandex-tracker-mcp"
+    "url": "https://github.com/sergeyyarin/yandex-tracker-mcp"
   }
 }

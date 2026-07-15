@@ -1,12 +1,13 @@
 # Yandex Tracker MCP Server
 
 ![PyPI - Version](https://img.shields.io/pypi/v/yandex-tracker-mcp)
-![Test Workflow](https://github.com/aikts/yandex-tracker-mcp/actions/workflows/test.yml/badge.svg?branch=main)
-![Release Workflow](https://github.com/aikts/yandex-tracker-mcp/actions/workflows/release.yml/badge.svg?branch=main)
+![Test Workflow](https://github.com/sergeyyarin/yandex-tracker-mcp/actions/workflows/test.yml/badge.svg?branch=main)
 
-mcp-name: io.github.aikts/yandex-tracker-mcp
+mcp-name: io.github.sergeyyarin/yandex-tracker-mcp
 
-A comprehensive Model Context Protocol (MCP) server that enables AI assistants to interact with Yandex Tracker APIs. This server provides secure, authenticated access to Yandex Tracker issues, queues, comments, worklogs, and search functionality with optional Redis caching for improved performance.
+A task-management-oriented fork of the comprehensive Model Context Protocol (MCP) server for Yandex Tracker. It adds an idempotent development-task workflow, controlled writes, write auditing and current Live Boards creation while retaining the upstream low-level tools.
+
+See the [controlled task-management guide](docs/TASK_MANAGEMENT.md). The upstream PyPI package remains useful for generic installations; build this fork from source or publish its container under `ghcr.io/sergeyyarin/yandex-tracker-mcp` for managed deployments.
 
 <a href="https://glama.ai/mcp/servers/@aikts/yandex-tracker-mcp">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@aikts/yandex-tracker-mcp/badge" />

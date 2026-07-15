@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     tracker_org_id: str | None = None
     tracker_limit_queues: Annotated[list[str] | None, NoDecode] = None
     tracker_read_only: bool = False
+    # Optional safety profile for AI-operated Tracker workflows. ``unrestricted``
+    # preserves the upstream behaviour. ``controlled`` allows additive writes,
+    # requires an explicit per-call confirmation for mutations, and denies
+    # destructive operations unless they are enabled separately.
+    tracker_write_policy: Literal["unrestricted", "controlled"] = "unrestricted"
+    tracker_allow_destructive: bool = False
+    # JSONL destination for write audit events. Leave unset to emit events only
+    # through the ``mcp_tracker.audit`` logger.
+    tracker_audit_log_path: str | None = None
     # Fields to strip from issue responses before sending to the client. These
     # are typically noisy / org-specific (favorite, qaEngineer, ...) — the Tracker
     # API always returns them, but most LLM workflows don't care. Override with

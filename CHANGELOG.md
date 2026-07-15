@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased — task-management adaptation
+
+### Added
+
+- Idempotent `tracker_issue_create_idempotent` workflow for task, checklist, epic and
+  dependency creation from roadmap/backlog source identifiers.
+- Optional `controlled` write profile with explicit confirmation for
+  mutations and destructive operations disabled by default.
+- Structured JSONL audit events for mutating Tracker HTTP requests.
+
+### Fixed
+
+- Board creation now uses the current `POST /v3/liveBoards/` endpoint and
+  converts the legacy queue filter argument to Live Boards `autoFilters`.
+
 ## [1.1.1] - 2026-06-12
 
 ### Fixed

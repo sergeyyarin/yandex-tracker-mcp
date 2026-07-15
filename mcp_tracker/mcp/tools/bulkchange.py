@@ -85,6 +85,9 @@ def register_bulkchange_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
         operation_id: Annotated[
             str | None, Field(description="Bulk operation id (status)")
         ] = None,
+        confirmed: Annotated[
+            bool, Field(description="Human approved this exact bulk mutation")
+        ] = False,
     ) -> dict[str, Any]:
         bulkchange = ctx.request_context.lifespan_context.bulkchange
         auth = get_yandex_auth(ctx)
@@ -95,7 +98,7 @@ def register_bulkchange_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             item = await bulkchange.bulk_status_get(operation_id, auth=auth)
             return {"operation": _dump(item)}
 
-        require_write_mode(settings, action)
+        require_write_mode(settings, "bulk", confirmed=confirmed)
 
         # Bulk operations must honor queue restrictions like single-issue tools.
         if issues:

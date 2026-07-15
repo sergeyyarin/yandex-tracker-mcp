@@ -18,6 +18,7 @@ from mcp_tracker.mcp.tools.project import (
     register_project_write_tools,
 )
 from mcp_tracker.mcp.tools.queue import register_queue_tools
+from mcp_tracker.mcp.tools.task_management import register_task_management_tools
 from mcp_tracker.mcp.tools.user import register_user_tools
 from mcp_tracker.settings import Settings
 
@@ -39,6 +40,7 @@ def register_all_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
 
     # Write tools — only in non read-only mode
     if not settings.tracker_read_only:
+        register_task_management_tools(settings, mcp)
         register_issue_write_tools(settings, mcp)
         register_issue_extras_tools(settings, mcp)
         register_project_write_tools(settings, mcp)

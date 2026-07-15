@@ -9,7 +9,11 @@ from pydantic import Field
 
 from mcp_tracker.mcp.context import AppContext
 from mcp_tracker.mcp.params import IssueID
-from mcp_tracker.mcp.tools._access import check_issue_access, check_queue_access
+from mcp_tracker.mcp.tools._access import (
+    check_issue_access,
+    check_queue_access,
+    require_write_mode,
+)
 from mcp_tracker.mcp.utils import get_yandex_auth
 from mcp_tracker.settings import Settings
 from mcp_tracker.tracker.proto.types.inputs import (
@@ -63,8 +67,12 @@ def register_issue_write_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
                 "'assignee' for reassigning, etc."
             ),
         ] = None,
+        confirmed: Annotated[
+            bool, Field(description="Human approved this exact status transition")
+        ] = False,
     ) -> list[IssueTransition]:
         check_issue_access(settings, issue_id)
+        require_write_mode(settings, "transition", confirmed=confirmed)
 
         return (
             await ctx.request_context.lifespan_context.issues.issue_execute_transition(
@@ -112,8 +120,12 @@ def register_issue_write_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             str | None,
             Field(description="Optional comment to add when closing the issue."),
         ] = None,
+        confirmed: Annotated[
+            bool, Field(description="Human approved closing this exact issue")
+        ] = False,
     ) -> list[IssueTransition]:
         check_issue_access(settings, issue_id)
+        require_write_mode(settings, "close", confirmed=confirmed, destructive=True)
 
         return await ctx.request_context.lifespan_context.issues.issue_close(
             issue_id,
@@ -169,6 +181,7 @@ def register_issue_write_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
         ] = None,
     ) -> Issue:
         check_queue_access(settings, queue)
+        require_write_mode(settings, "create")
         if parent is not None:
             check_issue_access(settings, parent)
         return await ctx.request_context.lifespan_context.issues.issue_create(
@@ -271,8 +284,16 @@ def register_issue_write_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
                 "Use the field's 'id' property as the key (e.g., {'fieldId': 'value'})."
             ),
         ] = None,
+        confirmed: Annotated[
+            bool, Field(description="Human approved this exact issue mutation")
+        ] = False,
     ) -> Issue:
         check_issue_access(settings, issue_id)
+        require_write_mode(
+            settings,
+            "priority" if priority is not None else "update",
+            confirmed=confirmed,
+        )
         auth = get_yandex_auth(ctx)
         issues = ctx.request_context.lifespan_context.issues
 
