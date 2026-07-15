@@ -978,4 +978,4 @@ This project is licensed under the terms specified in the [LICENSE](LICENSE) fil
 
 For issues and questions:
 - Review Yandex Tracker API documentation
-- Submit issues at https://github.com/aikts/yandex-tracker-mcp/issues
+- Submit issues at https://github.com/sergeyyarin/yandex-tracker-mcp/issues
