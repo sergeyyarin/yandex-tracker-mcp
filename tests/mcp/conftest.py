@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -76,7 +76,7 @@ def get_tool_result_content(result: CallToolResult) -> Any:
 def create_test_settings(
     limit_queues: list[str] | None = None,
     read_only: bool = False,
-    write_policy: str = "unrestricted",
+    write_policy: Literal["unrestricted", "controlled"] = "unrestricted",
     allow_destructive: bool = False,
 ) -> Settings:
     """Create Settings for testing with minimal required configuration."""
