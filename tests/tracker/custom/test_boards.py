@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 from aioresponses import aioresponses
+from yarl import URL
 
 from mcp_tracker.tracker.custom.client import TrackerClient
 from mcp_tracker.tracker.proto.types.boards import Board, BoardColumn, Sprint
@@ -159,3 +160,62 @@ class TestBoards:
         assert isinstance(result, Sprint)
         assert result.id == 44
         assert result.name == "Sprint 1"
+
+    async def test_board_create_uses_live_boards_api(
+        self, tracker_client: TrackerClient, sample_board_data: dict[str, Any]
+    ) -> None:
+        with aioresponses() as m:
+            m.post(
+                "https://api.tracker.yandex.net/v3/liveBoards/",
+                payload=sample_board_data,
+                status=201,
+            )
+            result = await tracker_client.board_create(
+                name="My Board",
+                filter={"queue": "TEST"},
+                columns=[{"name": "Open", "statuses": ["open"]}],
+            )
+
+        assert result.id == 73
+        request = m.requests[
+            ("POST", URL("https://api.tracker.yandex.net/v3/liveBoards/"))
+        ][0]
+        payload = request.kwargs["json"]
+        assert payload["autoFilters"] == {
+            "addFilter": {
+                "liveFilter": {"fieldValues": {"queue": [{"fixed": "TEST"}]}},
+                "enabled": True,
+            }
+        }
+        assert "filter" not in payload
+
+    async def test_board_create_accepts_native_auto_filters(
+        self, tracker_client: TrackerClient, sample_board_data: dict[str, Any]
+    ) -> None:
+        auto_filters = {
+            "addFilter": {
+                "liveFilter": {"fieldValues": {"assignee": [{"fixed": "user"}]}},
+                "enabled": True,
+            }
+        }
+        with aioresponses() as m:
+            m.post(
+                "https://api.tracker.yandex.net/v3/liveBoards/",
+                payload=sample_board_data,
+                status=201,
+            )
+            await tracker_client.board_create(
+                name="My Board",
+                filter={"queue": "IGNORED"},
+                auto_filters=auto_filters,
+                backlog_available=True,
+                sprints_available=True,
+            )
+
+        request = m.requests[
+            ("POST", URL("https://api.tracker.yandex.net/v3/liveBoards/"))
+        ][0]
+        payload = request.kwargs["json"]
+        assert payload["autoFilters"] == auto_filters
+        assert payload["backlogAvailable"] is True
+        assert payload["sprintsAvailable"] is True

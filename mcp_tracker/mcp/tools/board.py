@@ -56,8 +56,9 @@ def register_board_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             "- `columns` → `{columns: [...]}`; requires `board_id`\n"
             "- `sprints` → `{sprints: [...]}`; requires `board_id` "
             "(empty for kanban/filter-only boards)\n"
-            "- `create` → board; requires `name`; typically also `filter` and "
-            "`non_parametrized_columns` ([{name, statuses:[...]}, ...])\n"
+            "- `create` → board through the current Live Boards API; requires `name`; "
+            "use `filter={'queue': 'TEST'}` for the common queue-bound case, or "
+            "pass the native `auto_filters` structure\n"
             "- `update` → board; requires `board_id` and `fields`\n"
             "- `delete` → `{ok: true}`; requires `board_id`"
         ),
@@ -70,9 +71,26 @@ def register_board_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             Field(description="Board id (get/columns/sprints/update/delete)"),
         ] = None,
         name: Annotated[str | None, Field(description="Board name (create)")] = None,
+        owner: Annotated[
+            str | int | None, Field(description="Owner login or uid (create)")
+        ] = None,
+        board_permissions_template: Annotated[
+            Literal["private", "public"] | None,
+            Field(description="Board access template (create)"),
+        ] = None,
+        backlog_available: Annotated[
+            bool | None, Field(description="Enable backlog (create)")
+        ] = None,
+        sprints_available: Annotated[
+            bool | None, Field(description="Enable sprints (create)")
+        ] = None,
         filter: Annotated[
             dict[str, Any] | None,
             Field(description='Board filter, e.g. {"queue": "TEST"} (create)'),
+        ] = None,
+        auto_filters: Annotated[
+            dict[str, Any] | None,
+            Field(description="Native Live Boards autoFilters object (create)"),
         ] = None,
         non_parametrized_columns: Annotated[
             list[dict[str, Any]] | None,
@@ -80,30 +98,22 @@ def register_board_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
         ] = None,
         columns: Annotated[
             list[dict[str, Any]] | None,
-            Field(description="Alternative column payload (create)"),
+            Field(description="Status-bound board columns (create)"),
         ] = None,
-        query: Annotated[
-            str | None, Field(description="YQL query limiting board issues (create)")
+        backlog_columns: Annotated[
+            list[dict[str, Any]] | None,
+            Field(description="Backlog columns (create)"),
         ] = None,
-        order_by: Annotated[
-            str | None, Field(description="Field key for ordering (create)")
-        ] = None,
-        order_asc: Annotated[
-            bool | None, Field(description="Ascending flag (create)")
-        ] = None,
-        use_ranking: Annotated[
-            bool | None, Field(description="Use ranking (create)")
-        ] = None,
-        estimate_by: Annotated[
-            str | None, Field(description="Estimation field key (create)")
-        ] = None,
-        flow: Annotated[str | None, Field(description="Flow id (create)")] = None,
         fields: Annotated[
             dict[str, Any] | None, Field(description="Fields to update (update)")
         ] = None,
         extra: Annotated[
             dict[str, Any] | None, Field(description="Extra body fields (create)")
         ] = None,
+        confirmed: Annotated[
+            bool,
+            Field(description="Human approved this exact mutation (update/delete)"),
+        ] = False,
     ) -> dict[str, Any]:
         boards_proto = ctx.request_context.lifespan_context.boards
         auth = get_yandex_auth(ctx)
@@ -126,21 +136,21 @@ def register_board_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             sprints = await boards_proto.board_get_sprints(_need_id(), auth=auth)
             return {"sprints": _dump(sprints)}
 
-        require_write_mode(settings, action)
+        require_write_mode(settings, action, confirmed=confirmed)
 
         if action == "create":
             name_ = _require(name, "name", action)
             item = await boards_proto.board_create(
                 name=name_,
+                owner=owner,
+                board_permissions_template=board_permissions_template,
+                backlog_available=backlog_available,
+                sprints_available=sprints_available,
                 filter=filter,
+                auto_filters=auto_filters,
                 non_parametrized_columns=non_parametrized_columns,
+                backlog_columns=backlog_columns,
                 columns=columns,
-                query=query,
-                order_by=order_by,
-                order_asc=order_asc,
-                use_ranking=use_ranking,
-                estimate_by=estimate_by,
-                flow=flow,
                 extra=extra,
                 auth=auth,
             )
@@ -186,8 +196,12 @@ def register_board_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             str | int | None,
             Field(description="Board version for If-Match optimistic lock"),
         ] = None,
+        confirmed: Annotated[
+            bool,
+            Field(description="Human approved this exact mutation (update/delete)"),
+        ] = False,
     ) -> dict[str, Any]:
-        require_write_mode(settings, action)
+        require_write_mode(settings, action, confirmed=confirmed)
         boards_proto = ctx.request_context.lifespan_context.boards
         auth = get_yandex_auth(ctx)
 

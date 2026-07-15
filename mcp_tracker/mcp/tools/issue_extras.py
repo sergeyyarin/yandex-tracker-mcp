@@ -8,7 +8,11 @@ from pydantic import Field
 
 from mcp_tracker.mcp.context import AppContext
 from mcp_tracker.mcp.params import IssueID, QueueID
-from mcp_tracker.mcp.tools._access import check_issue_access, check_queue_access
+from mcp_tracker.mcp.tools._access import (
+    check_issue_access,
+    check_queue_access,
+    require_write_mode,
+)
 from mcp_tracker.mcp.utils import get_yandex_auth
 from mcp_tracker.settings import Settings
 from mcp_tracker.tracker.proto.types.issues import Issue
@@ -48,9 +52,13 @@ def register_issue_extras_tools(settings: Settings, mcp: FastMCP[Any]) -> None:
             dict[str, Any] | None,
             Field(description="Additional body fields to override per move"),
         ] = None,
+        confirmed: Annotated[
+            bool, Field(description="Human approved moving this exact issue")
+        ] = False,
     ) -> Issue:
         check_issue_access(settings, issue_id)
         check_queue_access(settings, queue)
+        require_write_mode(settings, "move", confirmed=confirmed)
         return await ctx.request_context.lifespan_context.issues.issue_move_to_queue(
             issue_id,
             queue,

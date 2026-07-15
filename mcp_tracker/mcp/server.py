@@ -86,6 +86,7 @@ def make_tracker_lifespan(settings: Settings) -> Lifespan:
             org_id=settings.tracker_org_id,
             timeout=settings.tracker_http_timeout,
             get_retries=settings.tracker_get_retries,
+            audit_log_path=settings.tracker_audit_log_path,
         )
 
         queues: QueuesProtocol = tracker

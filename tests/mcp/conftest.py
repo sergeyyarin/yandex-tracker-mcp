@@ -76,6 +76,8 @@ def get_tool_result_content(result: CallToolResult) -> Any:
 def create_test_settings(
     limit_queues: list[str] | None = None,
     read_only: bool = False,
+    write_policy: str = "unrestricted",
+    allow_destructive: bool = False,
 ) -> Settings:
     """Create Settings for testing with minimal required configuration."""
     return Settings.model_construct(
@@ -84,6 +86,9 @@ def create_test_settings(
         tracker_cloud_org_id=None,
         tracker_limit_queues=limit_queues,
         tracker_read_only=read_only,
+        tracker_write_policy=write_policy,
+        tracker_allow_destructive=allow_destructive,
+        tracker_audit_log_path=None,
         tools_cache_enabled=False,
         oauth_enabled=False,
         host="0.0.0.0",
@@ -252,6 +257,30 @@ async def client_session_with_limits(
 def test_settings_read_only() -> Settings:
     """Settings with read-only mode enabled."""
     return create_test_settings(read_only=True)
+
+
+@pytest.fixture
+def test_settings_controlled() -> Settings:
+    return create_test_settings(write_policy="controlled")
+
+
+@pytest.fixture
+def mcp_server_controlled(
+    test_settings_controlled: Settings,
+    mock_app_context: AppContext,
+) -> FastMCP[Any]:
+    return create_mcp_server(
+        settings=test_settings_controlled,
+        lifespan=make_test_lifespan(mock_app_context),
+    )
+
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def client_session_controlled(
+    mcp_server_controlled: FastMCP[Any],
+) -> AsyncIterator[ClientSession]:
+    async with safe_client_session(mcp_server_controlled) as session:
+        yield session
 
 
 @pytest.fixture

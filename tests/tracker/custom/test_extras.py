@@ -400,8 +400,9 @@ class TestBoardsWrite:
     async def test_board_create(self, tracker_client: TrackerClient) -> None:
         with aioresponses() as m:
             m.post(
-                "https://api.tracker.yandex.net/v3/boards",
+                "https://api.tracker.yandex.net/v3/liveBoards/",
                 payload={"id": 11, "name": "New"},
+                status=201,
             )
             result = await tracker_client.board_create(name="New")
         assert isinstance(result, Board)

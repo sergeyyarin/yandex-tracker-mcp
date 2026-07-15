@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import logging
 import os
 import random
@@ -8,6 +9,7 @@ from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from pathlib import Path
 from typing import Any, Literal
 
 import jwt
@@ -19,6 +21,7 @@ from aiohttp import (
     ClientTimeout,
     FormData,
     ServerDisconnectedError,
+    TraceConfig,
 )
 from pydantic import BaseModel, RootModel
 from yandex.cloud.iam.v1.iam_token_service_pb2 import CreateIamTokenRequest
@@ -202,6 +205,7 @@ def _order_to_yql_sort_by(order: list[str]) -> str:
 
 
 logger = logging.getLogger(__name__)
+audit_logger = logging.getLogger("mcp_tracker.audit")
 
 
 class ServiceAccountSettings(BaseModel):
@@ -336,6 +340,7 @@ class TrackerClient(
         base_url: str = "https://api.tracker.yandex.net",
         timeout: float = 30,
         get_retries: int = 2,
+        audit_log_path: str | None = None,
     ):
         self._token = token
         self._token_type = token_type
@@ -346,10 +351,64 @@ class TrackerClient(
         self._org_id = org_id
         self._cloud_org_id = cloud_org_id
         self._get_retries = max(0, get_retries)
+        self._audit_log_path = Path(audit_log_path) if audit_log_path else None
+        self._audit_lock = asyncio.Lock()
+
+        trace_config = TraceConfig()
+        trace_config.on_request_end.append(self._on_request_end)
+        trace_config.on_request_exception.append(self._on_request_exception)
 
         self._session = ClientSession(
             base_url=base_url,
             timeout=ClientTimeout(total=timeout),
+            trace_configs=[trace_config],
+        )
+
+    async def _emit_write_audit(
+        self,
+        *,
+        method: str,
+        url: str,
+        status: int | None,
+        error: str | None = None,
+    ) -> None:
+        path = url.split("?", 1)[0]
+        if method.upper() in {"GET", "HEAD", "OPTIONS"} or path.endswith(
+            ("/_search", "/_count")
+        ):
+            return
+        record = {
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            "method": method.upper(),
+            # Deliberately exclude query parameters, headers and bodies: audit
+            # metadata must never leak tokens or potentially sensitive task text.
+            "path": path,
+            "status": status,
+            "error": error,
+        }
+        line = json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+        audit_logger.info("tracker_write %s", line)
+        if self._audit_log_path is not None:
+            async with self._audit_lock:
+                self._audit_log_path.parent.mkdir(parents=True, exist_ok=True)
+                with self._audit_log_path.open("a", encoding="utf-8") as stream:
+                    stream.write(line + "\n")
+
+    async def _on_request_end(self, _session: Any, _context: Any, params: Any) -> None:
+        await self._emit_write_audit(
+            method=params.method,
+            url=str(params.url),
+            status=params.response.status,
+        )
+
+    async def _on_request_exception(
+        self, _session: Any, _context: Any, params: Any
+    ) -> None:
+        await self._emit_write_audit(
+            method=params.method,
+            url=str(params.url),
+            status=None,
+            error=type(params.exception).__name__,
         )
 
     @asynccontextmanager
@@ -1628,43 +1687,57 @@ class TrackerClient(
         self,
         *,
         name: str,
+        owner: str | int | None = None,
+        board_permissions_template: str | None = None,
+        backlog_available: bool | None = None,
+        sprints_available: bool | None = None,
         filter: dict[str, Any] | None = None,
+        auto_filters: dict[str, Any] | None = None,
         non_parametrized_columns: list[dict[str, Any]] | None = None,
+        backlog_columns: list[dict[str, Any]] | None = None,
         columns: list[dict[str, Any]] | None = None,
-        query: str | None = None,
-        order_by: str | None = None,
-        order_asc: bool | None = None,
-        use_ranking: bool | None = None,
-        estimate_by: str | None = None,
-        flow: str | None = None,
         extra: dict[str, Any] | None = None,
         auth: YandexAuth | None = None,
     ) -> Board:
         body: dict[str, Any] = {"name": name}
-        if filter is not None:
-            body["filter"] = filter
+        if owner is not None:
+            body["owner"] = owner
+        if board_permissions_template is not None:
+            body["boardPermissionsTemplate"] = board_permissions_template
+        if backlog_available is not None:
+            body["backlogAvailable"] = backlog_available
+        if sprints_available is not None:
+            body["sprintsAvailable"] = sprints_available
+        if auto_filters is not None:
+            body["autoFilters"] = auto_filters
+        elif filter is not None:
+            # Compatibility with the old MCP argument. The current Live Boards
+            # API represents board selection as autoFilters/liveFilter values.
+            field_values: dict[str, list[dict[str, Any]]] = {}
+            for key, raw_value in filter.items():
+                values = raw_value if isinstance(raw_value, list) else [raw_value]
+                field_values[key] = [
+                    value if isinstance(value, dict) else {"fixed": value}
+                    for value in values
+                ]
+            body["autoFilters"] = {
+                "addFilter": {
+                    "liveFilter": {"fieldValues": field_values},
+                    "enabled": True,
+                }
+            }
         if non_parametrized_columns is not None:
             body["nonParametrizedColumns"] = non_parametrized_columns
+        if backlog_columns is not None:
+            body["backlogColumns"] = backlog_columns
         if columns is not None:
             body["columns"] = columns
-        if query is not None:
-            body["query"] = query
-        if order_by is not None:
-            body["orderBy"] = order_by
-        if order_asc is not None:
-            body["orderAsc"] = order_asc
-        if use_ranking is not None:
-            body["useRanking"] = use_ranking
-        if estimate_by is not None:
-            body["estimateBy"] = estimate_by
-        if flow is not None:
-            body["flow"] = flow
         if extra:
             for k, v in extra.items():
                 body.setdefault(k, v)
 
         async with self._session.post(
-            "v3/boards", headers=await self._build_headers(auth), json=body
+            "v3/liveBoards/", headers=await self._build_headers(auth), json=body
         ) as response:
             if response.status >= 400:
                 await _raise_tracker_error(response)

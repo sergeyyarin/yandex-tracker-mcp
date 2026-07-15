@@ -1,3 +1,5 @@
+import json
+
 from aiohttp import ClientSession
 from pytest_mock import MockerFixture
 
@@ -108,3 +110,49 @@ class TestTrackerClientInit:
         await client.close()
         mock_close.assert_called_once()
         mock_session_close.assert_called_once()
+
+
+class TestWriteAudit:
+    async def test_writes_jsonl_without_query_or_body(self, tmp_path):
+        audit_path = tmp_path / "tracker-audit.jsonl"
+        client = TrackerClient(
+            token="test-token",
+            org_id="test-org",
+            audit_log_path=str(audit_path),
+        )
+        try:
+            await client._emit_write_audit(
+                method="PATCH",
+                url="https://api.tracker.yandex.net/v3/issues/TEST-1?token=secret",
+                status=200,
+            )
+        finally:
+            await client.close()
+
+        record = json.loads(audit_path.read_text())
+        assert record["method"] == "PATCH"
+        assert record["path"].endswith("/v3/issues/TEST-1")
+        assert "secret" not in audit_path.read_text()
+
+    async def test_read_and_search_requests_are_not_audited(self, tmp_path):
+        audit_path = tmp_path / "tracker-audit.jsonl"
+        client = TrackerClient(
+            token="test-token",
+            org_id="test-org",
+            audit_log_path=str(audit_path),
+        )
+        try:
+            await client._emit_write_audit(
+                method="GET",
+                url="https://api.tracker.yandex.net/v3/issues/TEST-1",
+                status=200,
+            )
+            await client._emit_write_audit(
+                method="POST",
+                url="https://api.tracker.yandex.net/v3/issues/_search",
+                status=200,
+            )
+        finally:
+            await client.close()
+
+        assert not audit_path.exists()

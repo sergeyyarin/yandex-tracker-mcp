@@ -47,7 +47,8 @@ READ_ONLY_TOOL_NAMES = [
 
 # Write tool names — only registered when not in read-only mode
 WRITE_TOOL_NAMES = [
-    # Issue write (5)
+    # Issue write (6)
+    "tracker_issue_create_idempotent",
     "issue_execute_transition",
     "issue_close",
     "issue_create",
