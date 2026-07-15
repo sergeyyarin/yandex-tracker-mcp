@@ -977,4 +977,4 @@ task
 
 По вопросам и проблемам:
 - Ознакомьтесь с документацией API Яндекс.Трекера
-- Отправляйте проблемы на https://github.com/aikts/yandex-tracker-mcp/issues
+- Отправляйте проблемы на https://github.com/sergeyyarin/yandex-tracker-mcp/issues
