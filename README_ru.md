@@ -38,25 +38,18 @@ mcp-name: io.github.sergeyyarin/yandex-tracker-mcp
 
 ## Конфигурация MCP клиента
 
-### Установка расширения в Claude Desktop
-
-Yandex Tracker MCP Server можно установить в один клик в Claude Desktop как [расширение](https://www.anthropic.com/engineering/desktop-extensions).
-
-#### Установка
-
-1. Скачайте файл `*.mcpb` из [GitHub Releases](https://github.com/aikts/yandex-tracker-mcp/releases/latest).
-2. Откройте скачанный файл, чтобы установить его в Claude Desktop. ![img.png](images/claude-desktop-install.png)
-3. Введите ваш OAuth токен Яндекс.Трекера при запросе. ![img.png](images/claude-desktop-config.png)
-4. Убедитесь, что расширение включено - теперь вы можете использовать этот MCP сервер.
-
-### Ручная установка
-
-#### Предварительные требования
+### Предварительные требования
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) установлен глобально
 - Действительный API токен Яндекс.Трекера с соответствующими разрешениями
 
-Следующие разделы показывают, как настроить MCP сервер для различных MCP-клиентов. Вы можете использовать либо `uvx yandex-tracker-mcp@latest`, либо Docker-образ `ghcr.io/aikts/yandex-tracker-mcp:latest`. Оба требуют следующие переменные окружения:
+Примеры для ChatGPT и Codex запускают этот форк из локальной рабочей копии.
+Примеры для остальных клиентов ниже используют upstream-пакет PyPI или
+контейнер и могут не содержать добавленные в этом форке функции управляемой
+работы с задачами. Локальный образ этого форка можно собрать командой
+`docker build -t yandex-tracker-mcp:local .`.
+
+Настройте один способ аутентификации и один идентификатор организации:
 
 - Аутентификация (один из следующих):
   - `TRACKER_TOKEN` - Ваш OAuth токен Яндекс.Трекера
@@ -65,70 +58,65 @@ Yandex Tracker MCP Server можно установить в один клик �
 - `TRACKER_CLOUD_ORG_ID` или `TRACKER_ORG_ID` - Идентификатор вашей организации Yandex Cloud (или Яндекс 360)
 
 <details>
-<summary><strong>Claude Desktop</strong></summary>
+<summary><strong>ChatGPT desktop app (ChatGPT Work или Codex)</strong></summary>
 
-**Путь к файлу конфигурации:**
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+1. Откройте **Settings** и выберите **MCP servers**.
+2. Нажмите **Add server** и выберите **STDIO**.
+3. Укажите команду `uv` и аргументы
+   `--directory /absolute/path/to/yandex-tracker-mcp run yandex-tracker-mcp`.
+4. Добавьте необходимые переменные окружения Трекера, сохраните сервер и
+   нажмите **Restart**.
 
-**Используя uvx:**
-```json
-{
-  "mcpServers": {
-    "yandex-tracker": {
-      "command": "uvx",
-      "args": ["yandex-tracker-mcp@latest"],
-      "env": {
-        "TRACKER_TOKEN": "ваш_токен_трекера",
-        "TRACKER_CLOUD_ORG_ID": "ваш_cloud_org_id",
-        "TRACKER_ORG_ID": "ваш_org_id"
-      }
-    }
-  }
-}
-```
-
-**Используя Docker:**
-```json
-{
-  "mcpServers": {
-    "yandex-tracker": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "TRACKER_TOKEN",
-        "-e", "TRACKER_CLOUD_ORG_ID",
-        "-e", "TRACKER_ORG_ID",
-        "ghcr.io/aikts/yandex-tracker-mcp:latest"
-      ],
-      "env": {
-        "TRACKER_TOKEN": "ваш_токен_трекера",
-        "TRACKER_CLOUD_ORG_ID": "ваш_cloud_org_id",
-        "TRACKER_ORG_ID": "ваш_org_id"
-      }
-    }
-  }
-}
-```
+ChatGPT desktop app, Codex CLI и расширение Codex для IDE используют общую
+конфигурацию MCP на одном хосте Codex. Для просмотра подключённых серверов
+используйте `/mcp` в поле ввода.
 
 </details>
 
 <details>
-<summary><strong>Claude Code</strong></summary>
+<summary><strong>Codex CLI и расширение для IDE</strong></summary>
 
-**Используя uvx:**
+**Локальная рабочая копия:**
+
 ```bash
-claude mcp add yandex-tracker uvx yandex-tracker-mcp@latest \
-  -e TRACKER_TOKEN=ваш_токен_трекера \
-  -e TRACKER_CLOUD_ORG_ID=ваш_cloud_org_id \
-  -e TRACKER_ORG_ID=ваш_org_id \
-  -e TRANSPORT=stdio
+codex mcp add yandex-tracker \
+  --env TRACKER_TOKEN=ваш_токен_трекера \
+  --env TRACKER_CLOUD_ORG_ID=ваш_cloud_org_id \
+  -- \
+  uv --directory /absolute/path/to/yandex-tracker-mcp run yandex-tracker-mcp
 ```
 
-**Используя Docker:**
+Для Яндекс 360 используйте `TRACKER_ORG_ID` вместо
+`TRACKER_CLOUD_ORG_ID`.
+
+**Локально собранный Docker-образ:**
+
 ```bash
-claude mcp add yandex-tracker docker "run --rm -i -e TRACKER_TOKEN=ваш_токен_трекера -e TRACKER_CLOUD_ORG_ID=ваш_cloud_org_id -e TRACKER_ORG_ID=ваш_org_id -e TRANSPORT=stdio ghcr.io/aikts/yandex-tracker-mcp:latest"
+codex mcp add yandex-tracker \
+  --env TRACKER_TOKEN=ваш_токен_трекера \
+  --env TRACKER_CLOUD_ORG_ID=ваш_cloud_org_id \
+  -- \
+  docker run --rm -i \
+    -e TRACKER_TOKEN \
+    -e TRACKER_CLOUD_ORG_ID \
+    yandex-tracker-mcp:local
 ```
+
+Для более точной настройки используйте `~/.codex/config.toml` или
+`.codex/config.toml` в доверенном проекте. `env_vars` передаёт значения из
+локального окружения, не сохраняя секреты в репозитории:
+
+```toml
+[mcp_servers.yandex-tracker]
+command = "uv"
+args = ["--directory", "/absolute/path/to/yandex-tracker-mcp", "run", "yandex-tracker-mcp"]
+env_vars = ["TRACKER_TOKEN", "TRACKER_IAM_TOKEN", "TRACKER_CLOUD_ORG_ID", "TRACKER_ORG_ID"]
+default_tools_approval_mode = "writes"
+```
+
+В расширении для IDE откройте меню с шестерёнкой, выберите **MCP servers**,
+добавьте ту же STDIO-команду и перезапустите расширение. Проверьте подключение
+через `codex mcp list` или `/mcp` в интерфейсе Codex TUI.
 
 </details>
 
@@ -581,16 +569,18 @@ TRACKER_CLOUD_ORG_ID=ваш_org_id \
 uvx yandex-tracker-mcp@latest
 ```
 
-Вы можете пропустить настройку `TRACKER_CLOUD_ORG_ID` или `TRACKER_ORG_ID`, если используете следующий формат при подключении к MCP серверу (пример для Claude Code):
+Можно не задавать `TRACKER_CLOUD_ORG_ID` или `TRACKER_ORG_ID` для всего
+сервера, если идентификатор организации передаётся в URL MCP, настроенном в
+Codex:
 
 ```bash
-claude mcp add --transport http yandex-tracker "http://localhost:8000/mcp/?cloudOrgId=ваш_cloud_org_id&"
+codex mcp add yandex-tracker --url "http://localhost:8000/mcp/?cloudOrgId=ваш_cloud_org_id"
 ```
 
 или
 
 ```bash
-claude mcp add --transport http yandex-tracker "http://localhost:8000/mcp/?orgId=org_id&"
+codex mcp add yandex-tracker --url "http://localhost:8000/mcp/?orgId=ваш_org_id"
 ```
 
 Вы также можете пропустить настройку глобальной переменной окружения `TRACKER_TOKEN`, если выберете использование OAuth 2.0 аутентификации (см. ниже).
@@ -669,10 +659,11 @@ OAUTH_SERVER_URL=https://oauth.yandex.ru  # OAuth сервер Яндекса п
 
 **Примечание**: Не все MCP клиенты в настоящее время поддерживают OAuth аутентификацию. Проверьте документацию вашего клиента на совместимость с OAuth.
 
-Пример конфигурации для Claude Code:
+Пример конфигурации для Codex:
 
 ```bash
-claude mcp add --transport http yandex-tracker https://ваш-mcp-сервер.example.com/mcp/ -s user
+codex mcp add yandex-tracker --url https://ваш-mcp-сервер.example.com/mcp/
+codex mcp login yandex-tracker
 ```
 
 #### Хранилище данных OAuth
