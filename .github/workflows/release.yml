@@ -33,36 +33,6 @@ jobs:
           path: dist/
           retention-days: 7
 
-  build-mcpb:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Prepare NodeJS
-        uses: actions/setup-node@v4
-
-      - name: Install mcpb CLI
-        run: |
-          npm install -g @anthropic-ai/mcpb
-
-      - name: Create mcpb package
-        run: |
-          mcpb validate manifest.json
-          mcpb pack . yandex-tracker-mcp-${{github.ref_name}}.mcpb
-
-      - name: Upload mcpb artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcpb
-          path: "*.mcpb"
-          retention-days: 7
-
   build-docker:
     runs-on: ubuntu-latest
     permissions:
@@ -108,7 +78,6 @@ jobs:
   release:
     needs:
       - build-python
-      - build-mcpb
       - build-docker
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
@@ -125,12 +94,6 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Download mcpb artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mcpb
-          path: mcpb/
-
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -139,4 +102,3 @@ jobs:
           generate_release_notes: true
           files: |
             dist/*
-            mcpb/*

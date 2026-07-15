@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased — task-management adaptation
+## Unreleased
 
 ### Added
 
@@ -11,6 +11,19 @@ All notable changes to this project will be documented in this file.
 - Optional `controlled` write profile with explicit confirmation for
   mutations and destructive operations disabled by default.
 - Structured JSONL audit events for mutating Tracker HTTP requests.
+- Repository guidance in `AGENTS.md` and focused skills for adding MCP tools,
+  updating documentation, checking GitHub Actions and preparing releases.
+
+### Changed
+
+- Client setup documentation now covers ChatGPT Work and Codex in the ChatGPT
+  desktop app, Codex CLI and the Codex IDE extension. Browser-based ChatGPT
+  Work remains undocumented until a public remote MCP plugin is available.
+
+### Removed
+
+- Claude-specific project commands and guidance.
+- Claude Desktop MCPB packaging, release artifacts and screenshots.
 
 ### Fixed
 

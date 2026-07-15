@@ -177,6 +177,7 @@ class TestBoards:
             )
 
         assert result.id == 73
+        assert m.requests is not None
         request = m.requests[
             ("POST", URL("https://api.tracker.yandex.net/v3/liveBoards/"))
         ][0]
@@ -212,6 +213,7 @@ class TestBoards:
                 sprints_available=True,
             )
 
+        assert m.requests is not None
         request = m.requests[
             ("POST", URL("https://api.tracker.yandex.net/v3/liveBoards/"))
         ][0]
