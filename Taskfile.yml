@@ -50,9 +50,3 @@ tasks:
     cmds:
       - uv run pytest --cov-report=html
       - echo "Coverage report generated in htmlcov/index.html"
-
-  mcpb:
-    desc: Build MCPB package
-    cmds:
-      - mcpb validate manifest.json
-      - mcpb pack .
